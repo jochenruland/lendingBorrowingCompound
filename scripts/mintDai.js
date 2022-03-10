@@ -16,10 +16,10 @@ const mintDai = async () => {
     accounts = await web3.eth.getAccounts();
 
     const numDaiToMint = web3.utils.toWei('1000', 'ether');
-    await daiInstance.methods.mint(accounts[0], numDaiToMint).send({from: daiOwner, gasPrice: web3.utils.toHex(0)});
+    await daiInstance.methods.mint(accounts[0], numDaiToMint).send({from: daiOwner, gasPrice: web3.utils.toHex(0)}); 
     const daiOnAccount0 = await daiInstance.methods.balanceOf(accounts[0]).call();
     console.log('Dai minted on account0', daiOnAccount0 / 1e18);
-    
+
   } catch(err) {
     console.error(err);
   }
