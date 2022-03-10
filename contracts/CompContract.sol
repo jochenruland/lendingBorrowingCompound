@@ -67,20 +67,20 @@ contract Comp {
       revert('comptroller.getAccountLiquidity() failed.');
     }
     require(shortfall == 0, "Account underwater");
-    require(liquidity >0, "Account does not have excess collateral");
-    emit LogProcess("Account has liquidity of: ", liquidity);
+    require(maxLiquidity > 0, "Account does not have excess collateral");
+    emit LogProcess("Account has liquidity of: ", maxLiquidity);
 
     //find out collateral factor for token you want to borrow
-    (bool isListed, uint256 collateralFactor)= comptroller.markets(bToken);
+    (bool isListed, uint256 collateralFactor) = comptroller.markets(address(cBToken));
     emit LogProcess("CollateralFactor for bToken:", collateralFactor);
 
     //get borrow rate added to the borrow Amount each block
     uint256 borrowRate = cBToken.borrowRatePerBlock();
     emit LogProcess("Current borrow rate per block for btoken: ", borrowRate);
 
-    uint256 collateralPrice = priceFeed.getUnderlyingPrice(address(cBToken));
-    uint256 maxBorrow = liquidity/collateralPrice;
-    emit LogProcess("Maximum Amount of bToken to borrow (You should borrow far less): " maxBorrow);
+    uint256 collateralPrice = priceFeed.getUnderlyingPrice(address(cDai));
+    uint256 maxBorrow = maxLiquidity/collateralPrice;
+    emit LogProcess("Maximum Amount of bToken to borrow (You should borrow far less): ", maxBorrow);
 
     uint256 borrowAmount = maxBorrow * 30 / 100;
 
@@ -90,7 +90,7 @@ contract Comp {
 
     // get actual borrow balance
     uint256 currentBorrow = cBToken.borrowBalanceCurrent(address(this));
-    emit LogProcess("Current amount borrowed of bToken: " currentBorrow);
+    emit LogProcess("Current amount borrowed of bToken: ", currentBorrow);
 
     return currentBorrow;
 
@@ -98,7 +98,7 @@ contract Comp {
 
   function payback() external {
     // before repaying the loan we must approve the cBat contract to take our bat tokens plus the amount of interests (you can calculate the interest before)
-    btoken.approve(address(cBToken), 120);
+    bToken.approve(address(cBToken), 120);
     cBToken.repayBorrow(100);
 
     //Optional: reimburse collateral immediately as part of this function
