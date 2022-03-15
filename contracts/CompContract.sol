@@ -7,6 +7,7 @@ import "./ComptrollerInterface.sol";
 import "./CTokenInterface.sol";
 
 
+
 contract Comp {
 
   IERC20 dai;
@@ -21,37 +22,46 @@ contract Comp {
   event LogProcess(string, uint256);
 
   // Addresses deoend on network you are deploying to
-  constructor(address _dai, address _cDai, address _bToken, address _cBToken, address _comptroller) {
+  constructor() {
+    admin = msg.sender;
+  }
+
+  // 0. Initialize pointer to compound and erc20 contracts
+  function initialize(address _dai, address _cDai, address _bToken, address _cBToken, address _comptroller, address _priceFeed) external onlyAdmin {
     dai = IERC20(_dai);
     cDai = ICErc20(_cDai);
     bToken = IERC20(_bToken);
     cBToken = ICErc20(_cBToken);
     comptroller = IComptroller(_comptroller);
+    priceFeed = IPriceFeed(_priceFeed);
 
-    admin = msg.sender;
   }
 
   // 1. Provide collateral to compound protocol
-  function investDai(uint256 daiAmount) external {
+  function investDai(uint256 daiAmount) external onlyAdmin {
     // the SC needs to have Dai first
     dai.approve(address(cDai), daiAmount);
     // This calls the ERC20 transferFrom() from the Dai token -> therefore we must approve frist
-    cDai.mint(daiAmount);
+    uint error0 = cDai.mint(daiAmount);
+    require(error0 == 0, "cDai.mint Error");
     // After calling the mint function the SC owns cDai and earns interest on the investment
   }
 
-  function cashOut() external {
+  function cashOut() external onlyAdmin {
     // request the total amount of cDai which consists of investment plus interets
     uint balance = cDai.balanceOf(address(this));
     cDai.redeem(balance);
   }
 
-  function borrow(uint256 daiCollateral) external returns(uint256) {
+  function borrow(uint256 daiCollateral) external onlyAdmin returns(uint256) {
     // the SC needs to have Dai first
-    dai.approve(address(cDai), daiCollateral);
+
     // This calls the ERC20 transferFrom() from the Dai token -> therefore we must approve frist
-    cDai.mint(daiCollateral);
+    dai.approve(address(cDai), daiCollateral);
+
     // After calling the mint function the SC owns cDai and earns interest on the investment
+    uint256 error1 = cDai.mint(daiCollateral);
+    require(error1 == 0, 'cDai.mint() failed');
 
     // Signal to compound protocol that we want to use some of our invested token as collateral for our loan
     address[] memory markets = new address[](1);
@@ -71,19 +81,22 @@ contract Comp {
     emit LogProcess("Account has liquidity of: ", maxLiquidity);
 
     //find out collateral factor for token you want to borrow
-    (bool isListed, uint256 collateralFactor) = comptroller.markets(address(cBToken));
+    (bool isListed, uint256 collateralFactor) = comptroller.markets(address(cDai));
     emit LogProcess("CollateralFactor for bToken:", collateralFactor);
 
-    //get borrow rate added to the borrow Amount each block
+
+    //get borrow rate added to the borrow amount each block
     uint256 borrowRate = cBToken.borrowRatePerBlock();
     emit LogProcess("Current borrow rate per block for btoken: ", borrowRate);
 
     uint256 collateralPrice = priceFeed.getUnderlyingPrice(address(cDai));
+    emit LogProcess("CollateralPrice: ", collateralPrice);
+
     uint256 maxBorrow = maxLiquidity/collateralPrice;
     emit LogProcess("Maximum Amount of bToken to borrow (You should borrow far less): ", maxBorrow);
 
-    uint256 borrowAmount = maxBorrow * 30 / 100;
-
+    uint256 borrowAmount = maxBorrow * 80 / 100;
+    emit LogProcess("borrowAmount calculated as 80% of maxBorrow): ", borrowAmount);
 
     // when borrowing, the amount must be inferior to the collateral minus the collateral factor; must be caluculated first!!!
     cBToken.borrow(borrowAmount * 10**18);
@@ -92,11 +105,11 @@ contract Comp {
     uint256 currentBorrow = cBToken.borrowBalanceCurrent(address(this));
     emit LogProcess("Current amount borrowed of bToken: ", currentBorrow);
 
-    return currentBorrow;
+    return currentBorrow; //currentBorrow
 
   }
 
-  function payback() external {
+  function payback() external onlyAdmin {
     // before repaying the loan we must approve the cBat contract to take our bat tokens plus the amount of interests (you can calculate the interest before)
     bToken.approve(address(cBToken), 120);
     cBToken.repayBorrow(100);
@@ -106,5 +119,10 @@ contract Comp {
     uint balance = cDai.balanceOf(address(this));
     cDai.redeem(balance);
 
+  }
+
+  modifier onlyAdmin() {
+    require(msg.sender == admin, "Only admin can call the function");
+    _;
   }
 }
