@@ -35,6 +35,8 @@ contract Comp {
     comptroller = IComptroller(_comptroller);
     priceFeed = IPriceFeed(_priceFeed);
 
+    emit LogProcess('priceFeed initialized at address: ', address(priceFeed));
+
   }
 
   // 1. Provide collateral to compound protocol
