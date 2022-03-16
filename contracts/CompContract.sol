@@ -7,7 +7,6 @@ import "./ComptrollerInterface.sol";
 import "./CTokenInterface.sol";
 
 
-
 contract Comp {
 
   IERC20 dai;
@@ -17,6 +16,7 @@ contract Comp {
   IComptroller comptroller;
   IPriceFeed priceFeed;
 
+  address addrCDai;
   address admin;
 
   event LogProcess(string, uint256);
@@ -34,15 +34,14 @@ contract Comp {
     cBToken = ICErc20(_cBToken);
     comptroller = IComptroller(_comptroller);
     priceFeed = IPriceFeed(_priceFeed);
-
-    emit LogProcess('priceFeed initialized at address: ', address(priceFeed));
+    addrCDai = _cDai;
 
   }
 
   // 1. Provide collateral to compound protocol
   function investDai(uint256 daiAmount) external onlyAdmin {
     // the SC needs to have Dai first
-    dai.approve(address(cDai), daiAmount);
+    dai.approve(addrCDai, daiAmount);
     // This calls the ERC20 transferFrom() from the Dai token -> therefore we must approve frist
     uint error0 = cDai.mint(daiAmount);
     require(error0 == 0, "cDai.mint Error");
@@ -59,7 +58,7 @@ contract Comp {
     // the SC needs to have Dai first
 
     // This calls the ERC20 transferFrom() from the Dai token -> therefore we must approve frist
-    dai.approve(address(cDai), daiCollateral);
+    dai.approve(addrCDai, daiCollateral);
 
     // After calling the mint function the SC owns cDai and earns interest on the investment
     uint256 error1 = cDai.mint(daiCollateral);
@@ -67,7 +66,7 @@ contract Comp {
 
     // Signal to compound protocol that we want to use some of our invested token as collateral for our loan
     address[] memory markets = new address[](1);
-    markets[0] = address(cDai);
+    markets[0] = addrCDai;
     uint256[] memory errors = comptroller.enterMarkets(markets); // Function takes an a array of token addresses which we have to create first
     if (errors[0] != 0) {
       revert('comptroller.enterMarkets() failed');
@@ -83,7 +82,7 @@ contract Comp {
     emit LogProcess("Account has liquidity of: ", maxLiquidity);
 
     //find out collateral factor for token you want to borrow
-    (bool isListed, uint256 collateralFactor) = comptroller.markets(address(cDai));
+    (bool isListed, uint256 collateralFactor) = comptroller.markets(addrCDai);
     emit LogProcess("CollateralFactor for bToken:", collateralFactor);
 
 
@@ -91,7 +90,7 @@ contract Comp {
     uint256 borrowRate = cBToken.borrowRatePerBlock();
     emit LogProcess("Current borrow rate per block for btoken: ", borrowRate);
 
-    uint256 collateralPrice = priceFeed.getUnderlyingPrice(address(cDai));
+    uint256 collateralPrice = priceFeed.getUnderlyingPrice(addrCDai);
     emit LogProcess("CollateralPrice: ", collateralPrice);
 
     uint256 maxBorrow = maxLiquidity/collateralPrice;
@@ -107,7 +106,7 @@ contract Comp {
     uint256 currentBorrow = cBToken.borrowBalanceCurrent(address(this));
     emit LogProcess("Current amount borrowed of bToken: ", currentBorrow);
 
-    return currentBorrow; //currentBorrow
+    return currentBorrow; //
 
   }
 
