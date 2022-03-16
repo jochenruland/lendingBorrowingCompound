@@ -41,49 +41,47 @@ beforeEach(async () => {
 
 describe('Testing Comp on mainfork', () => {
   it('1. Contract available on mainfork', () => {
+    console.log('Mainfork connected: ', accounts);
+    console.log('1. Contract address: ', contractInstance.options.address);
     assert.ok(contractInstance.options.address);
   });
 
-  it('2. Initializes pointer to comptroller, priceFeed, Erc20 and cTokens'), async () => {
-    assert.equal();
-  });
-
-  it('Invests dai', async () => {
+  it('2. Initializes state variables and invests dai and earns interest', async () => {
+    await contractInstance.methods.initialize(dai, cDai, bat, cBat, comptroller, priceFeed).send(sendParamaters);
 
     await daiInstance.methods.transferFrom(accounts[0], contractInstance.options.address, web3.utils.toWei('50', 'ether')).send(sendParamaters);
 
-
     daiOnContractBefore = await daiInstance.methods.balanceOf(contractInstance.options.address).call();
-    console.log('Dai sent to this contract: ', daiOnContractBefore / 1e18);
+    console.log('2a. Dai sent to this contract: ', daiOnContractBefore / 1e18);
 
-    const daiToSupply = 10 * 1e18;
+    const daiToSupply1 = 10 * 1e18;
 
-    await contractInstance.methods.investDai(web3.utils.toBN(daiToSupply)).send(sendParamaters);
+    await contractInstance.methods.investDai(web3.utils.toBN(daiToSupply1)).send(sendParamaters);
 
     const daiOnContractAfter = await daiInstance.methods.balanceOf(contractInstance.options.address).call();
-    console.log('Dai available after minting cDai on compound', daiOnContractAfter / 1e18);
+    console.log('2b. Dai available after minting cDai on compound', daiOnContractAfter / 1e18);
+
     assert(parseInt(daiOnContractBefore) > parseInt(daiOnContractAfter));
 
   });
 
-  it('Redeems cDAi and earns interest', async () => {
+  it('3. Redeems cDAi and earns interest', async () => {
     sleep(60000);
     await contractInstance.methods.cashOut().send(sendParamaters);
     const daiBalance = await daiInstance.methods.balanceOf(contractInstance.options.address).call();
-    console.log('Dai + interests on this contract after redeeming cDai: ' , daiBalance / 1e18);
+    console.log('3.  Dai + interests on this contract after redeeming cDai: ' , daiBalance / 1e18);
+
     assert(parseInt(daiBalance) > parseInt(daiOnContractBefore));
   });
 
-  it('Deposits Dai as collateral and borrows Bat token', async () => {
-    const bat = await contractInstance.methods.borrow(web3.utils.toWei('10','ether')).send(sendParamaters);
-    console.log('Bat token borrowed: ', bat);
-  })
+  it('4. Deposits Dai as collateral and borrows Bat token', async () => {
+    daiOnContractBefore = await daiInstance.methods.balanceOf(contractInstance.options.address).call();
+    console.log('4. Dai on this contract before borrowing bat: ', daiOnContractBefore / 1e18);
 
-  console.log('TESTREPORT:');
-  console.log('Mainfork connected: ' accounts);
-  console.log('1. Contract address: ', contractInstance.options.address);
-
-
+    const daiToSupply2 = 10 * 1e18;
+    await contractInstance.methods.borrow(web3.utils.toBN(daiToSupply2)).send(sendParamaters);
+    //console.log('Bat token borrowed: ', borrowAmout);
+  });
 
 
 });
