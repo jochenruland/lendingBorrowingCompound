@@ -10,8 +10,7 @@ const compJSON = require('../build/contracts/Comp.json');
 const deploymentKey = Object.keys(compJSON.networks)[0];
 
 
-const contractAddress = '0x253Cc9BfB23Bc52E0De0f71bc48c5bFA995DAbA0'
-//compJSON.networks[deploymentKey].address
+const contractAddress = compJSON.networks[deploymentKey].address; //compJSON.networks[deploymentKey].address
 
 const sentDai = async () => {
   let accounts;
