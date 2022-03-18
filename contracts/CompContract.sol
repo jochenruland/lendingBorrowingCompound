@@ -100,13 +100,13 @@ contract Comp {
     emit LogProcess("borrowAmount calculated as 80% of maxBorrow): ", borrowAmount);
 
     // when borrowing, the amount must be inferior to the collateral minus the collateral factor; must be caluculated first!!!
-    cBToken.borrow(borrowAmount * 10**18);
+    require(cBToken.borrow(5 * 10**18) == 0, "got collateral?");
 
     // get actual borrow balance
     uint256 currentBorrow = cBToken.borrowBalanceCurrent(address(this));
     emit LogProcess("Current amount borrowed of bToken: ", currentBorrow);
 
-    return currentBorrow; //
+    return currentBorrow; 
 
   }
 
