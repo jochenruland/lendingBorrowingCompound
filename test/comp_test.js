@@ -1,6 +1,16 @@
 
+const options = {
+    reconnect: {
+        auto: true,
+        delay: 5000, // ms
+        maxAttempts: 5,
+        onTimeout: false
+    }
+};
+
+
 const Web3 = require('web3');
-const provider = new Web3.providers.HttpProvider('http://localhost:7545');
+const provider = new Web3.providers.WebsocketProvider('http://127.0.0.1:7545', options);
 const web3 = new Web3(provider);
 
 const compJSON = require('../build/contracts/Comp.json');
@@ -33,7 +43,7 @@ beforeEach(async () => {
   // Web3 transaction information, we'll use this for every transaction we'll send as long as we do not pass any value
   sendParamaters = {
     from: accounts[0],
-    gasLimit: web3.utils.toHex(500000),
+    gasLimit: web3.utils.toHex(5000000),
     gasPrice: web3.utils.toHex(20000000000)
   };
 
@@ -78,10 +88,27 @@ describe('Testing Comp on mainfork', () => {
     daiOnContractBefore = await daiInstance.methods.balanceOf(contractInstance.options.address).call();
     console.log('4. Dai on this contract before borrowing bat: ', daiOnContractBefore / 1e18);
 
-    const daiToSupply2 = 10 * 1e18;
-    await contractInstance.methods.borrow(web3.utils.toBN(daiToSupply2)).send(sendParamaters);
+    let options = {
+        /*filter: {
+            value: [],
+        },
+        fromBlock: 0
+        */
+    }
+
+    // works only in combination with Web3.providers.WebsocketProvider
+    contractInstance.events.LogProcess(options)
+    .on('data', (event) => {
+      console.log(event.returnValues);
+    })
+    .on('error', console.error);
+
+    //const daiToSupply2 = 10 * 1e18;
+    await contractInstance.methods.borrow(web3.utils.toWei('10', 'ether')).send(sendParamaters);
     //console.log('Bat token borrowed: ', borrowAmout);
+
   });
+
 
 
 });
